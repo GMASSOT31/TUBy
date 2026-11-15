@@ -150,32 +150,49 @@ const call = async (path, { method = 'GET', body, cookie } = {}) => {
   await page.getByRole('button', { name: 'Ouvrir le plan du guide' }).click()
   await shot(page, 'eleve-plan')
   await page.keyboard.press('Escape')
-  await jump('Chapitre 2', 'Ton site a-t-il besoin')
-  await page.getByRole('heading', { name: /Ton site a-t-il besoin d'une base de données/ }).waitFor()
+  await jump('Chapitre 2', 'Quel stockage pour ton site')
+  await page.getByRole('heading', { name: 'Quel stockage pour ton site ?' }).waitFor()
   await page.getByText('Chapitre 2 · Création du MVP').waitFor()
-  await page.getByText('Étape 5/11').waitFor()
+  await page.getByText('Étape 5/16').waitFor()
   await shot(page, 'eleve-choix')
   log('fil d’Ariane : chapitre, étape, saut direct')
 
   // 6. Les choix envoient immédiatement à la bonne cible ; les boucles fonctionnent.
+  const h = (name) => page.getByRole('heading', { name, exact: true }).waitFor()
+  const oui = () => page.getByRole('button', { name: 'Oui', exact: true }).click()
+  const stockage = async (option) => {
+    await jump('Chapitre 2', 'Quel stockage pour ton site')
+    await h('Quel stockage pour ton site ?')
+    await page.getByRole('button', { name: option, exact: true }).click()
+  }
   await page.getByRole('button', { name: 'Je ne sais plus' }).click()
-  await page.getByRole('heading', { name: 'Demande à Claude', exact: true }).waitFor()
-  await page.getByRole('button', { name: 'Oui' }).click()
-  await page.getByRole('heading', { name: /Ton site a-t-il besoin/ }).waitFor()
-  await page.getByRole('button', { name: 'Oui', exact: true }).click()
-  await page.getByRole('heading', { name: 'Crée la base de données' }).waitFor()
-  await page.getByRole('button', { name: 'Oui' }).click()
-  await page.getByRole('heading', { name: 'Donne-la à Claude Code' }).waitFor()
+  await h('Demande à Claude')
+  await oui()
+  await h('Quel stockage pour ton site ?')
+  await page.getByRole('button', { name: 'Aucun', exact: true }).click()
+  await h('Envoie et laisse Claude travailler')
+  await oui()
+  await h('Enregistre le travail dans GitHub')
+
+  await stockage('Cloudflare D1')
+  await h('Crée la base de données')
+  await oui()
+  await h('Donne-la à Claude Code')
   await page.getByRole('button', { name: 'Copier' }).waitFor()
   await shot(page, 'eleve-d1')
-  await page.getByRole('button', { name: 'Oui' }).click()
-  await page.getByRole('heading', { name: 'Envoie et laisse Claude travailler' }).waitFor()
-  await jump('Chapitre 2', 'Ton site a-t-il besoin')
-  await page.getByRole('button', { name: 'Non', exact: true }).click()
-  await page.getByRole('heading', { name: 'Envoie et laisse Claude travailler' }).waitFor()
-  await page.getByRole('button', { name: 'Oui' }).click()
-  await page.getByRole('heading', { name: 'Enregistre le travail dans GitHub' }).waitFor()
-  await page.getByRole('button', { name: 'Oui' }).click()
+  await oui()
+  await h('Envoie et laisse Claude travailler')
+  await oui()
+  await h('Enregistre le travail dans GitHub')
+
+  await stockage('Supabase')
+  for (const t of ['Compte Supabase', 'Ajoute le connecteur Supabase', 'Envoie ton message à Claude Code', 'Fais créer la base par Claude', 'Donne les clés à Claude Code']) {
+    await h(t)
+    if (t === 'Fais créer la base par Claude') await shot(page, 'eleve-supabase')
+    await oui()
+  }
+  await h('Enregistre le travail dans GitHub')
+  await oui()
 
   // 8. Chaque chapitre se termine par son récap.
   await page.getByRole('heading', { name: 'Ce que tu viens de faire' }).waitFor()
@@ -231,7 +248,7 @@ const call = async (path, { method = 'GET', body, cookie } = {}) => {
   const ch0 = await dlg.getByRole('button', { name: /Chapitre 0/ }).innerText()
   assert.match(ch0, /\b[1-9]\d*\/\d+/, `chapitre 0 gardé (${ch0})`) // ses étapes faites sont conservées
   await dlg.getByText('0/12').waitFor() // chapitre 1 : remis à zéro
-  await dlg.getByText('0/11').waitFor() // chapitre 2 : remis à zéro
+  await dlg.getByText('0/16').waitFor() // chapitre 2 : remis à zéro
   await shot(page, 'eleve-nouveau-site')
   await page.keyboard.press('Escape')
   log('nouveau site (écran de fin) : chapitre 0 gardé, chapitres suivants remis à zéro')

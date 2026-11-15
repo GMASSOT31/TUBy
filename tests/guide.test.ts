@@ -26,8 +26,14 @@ const yes = (s: TubeState) => applyAction(s, { action: 'done', step_id: s.assign
 const pick = (s: TubeState, option: number) => applyAction(s, { action: 'choose', step_id: s.assignment.current_step_id!, option }).state
 
 describe('guide de départ', () => {
-  it('ne parle plus de Supabase : tout est chez Cloudflare', () => {
-    expect(raw.toLowerCase()).not.toContain('supabase')
+  it('le guide propose les 3 stockages, et Claude les nomme avec les mêmes mots au chapitre 1', () => {
+    const choix = byTitle('Quel stockage pour ton site')
+    expect(choix.config.options!.map((o) => o.label)).toEqual(['Aucun', 'Cloudflare D1', 'Supabase', 'Je ne sais plus'])
+    for (const phrase of ['« Stockage : aucun »', '« Stockage : Cloudflare D1 »', '« Stockage : Supabase »']) expect(raw).toContain(phrase)
+  })
+
+  it('le chapitre 0 ne demande ni Supabase ni connecteur (seulement si le site a des photos)', () => {
+    expect(seq.filter((s) => s.chapter_id === 1).map((s) => s.titre).join(' ')).not.toMatch(/supabase|connecteur/i)
   })
 
   it('chaque cible (goto, apres) existe', () => {
@@ -46,24 +52,28 @@ describe('guide de départ', () => {
     }
   })
 
-  it('base de données « Oui » : créer la base, la donner à Claude Code, envoyer', () => {
-    let s = pick(at('Ton site a-t-il besoin'), 0)
-    expect(here(s)).toBe('Crée la base de données')
-    s = yes(s)
-    expect(here(s)).toBe('Donne-la à Claude Code')
-    s = yes(s)
-    expect(here(s)).toBe('Envoie et laisse Claude travailler')
-    expect(here(yes(s))).toBe('Enregistre le travail dans GitHub')
+  const choice = (o: number) => pick(at('Quel stockage pour ton site'), o)
+  const walk = (s: TubeState, n: number) => { const seen = [here(s)]; for (let i = 0; i < n; i++) { s = yes(s); seen.push(here(s)) } return seen }
+
+  it('stockage « Aucun » : on envoie directement, puis on enregistre dans GitHub', () => {
+    expect(walk(choice(0), 1)).toEqual(['Envoie et laisse Claude travailler', 'Enregistre le travail dans GitHub'])
   })
 
-  it('base de données « Non » : on envoie directement', () => {
-    expect(here(pick(at('Ton site a-t-il besoin'), 1))).toBe('Envoie et laisse Claude travailler')
+  it('stockage « Cloudflare D1 » : créer la base, la donner à Claude Code, envoyer, enregistrer', () => {
+    expect(walk(choice(1), 3)).toEqual(['Crée la base de données', 'Donne-la à Claude Code', 'Envoie et laisse Claude travailler', 'Enregistre le travail dans GitHub'])
+  })
+
+  it('stockage « Supabase » : compte, connecteur, envoi, création de la base, clés, enregistrer (sans passer par D1)', () => {
+    expect(walk(choice(2), 5)).toEqual([
+      'Compte Supabase', 'Ajoute le connecteur Supabase', 'Envoie ton message à Claude Code',
+      'Fais créer la base par Claude', 'Donne les clés à Claude Code', 'Enregistre le travail dans GitHub',
+    ])
   })
 
   it('« Je ne sais plus » : on demande à Claude puis on revient à la question', () => {
-    const s = pick(at('Ton site a-t-il besoin'), 2)
+    const s = choice(3)
     expect(here(s)).toBe('Demande à Claude')
-    expect(here(yes(s))).toMatch(/^Ton site a-t-il besoin/)
+    expect(here(yes(s))).toBe('Quel stockage pour ton site ?')
   })
 
   it('les boucles bug et modifications client reviennent au bon endroit', () => {
@@ -79,7 +89,7 @@ describe('guide de départ', () => {
     let s = at('Avant de commencer')
     for (let i = 0; i < 200 && s.assignment.status !== 'termine'; i++) {
       const cur = seq.find((x) => x.id === s.assignment.current_step_id)!
-      s = cur.type === 'choix' ? pick(s, cur.titre.startsWith('Ton site') ? 1 : cur.titre === 'Alors ?' ? 0 : 1) : yes(s)
+      s = cur.type === 'choix' ? pick(s, cur.titre.startsWith('Quel stockage') ? 2 : cur.titre === 'Alors ?' ? 0 : 1) : yes(s)
     }
     expect(s.assignment.status).toBe('termine')
   })

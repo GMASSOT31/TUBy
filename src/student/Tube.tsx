@@ -143,7 +143,7 @@ function StepScreen({ state, step, onAct, error }: { state: TubeState; step: Ste
       <>
         <div className="grid gap-3">
           {(step.config.options ?? []).map((o, i) => (
-            <Button key={i} className="w-full py-3 text-left" variant={i === 0 ? 'primary' : 'secondary'} onClick={() => onAct({ action: 'choose', step_id: step.id, option: i })}>{o.label}</Button>
+            <Button key={i} className="w-full py-3 text-left" variant="secondary" onClick={() => onAct({ action: 'choose', step_id: step.id, option: i })}>{o.label}</Button>
           ))}
         </div>
         {escape}

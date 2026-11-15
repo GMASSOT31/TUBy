@@ -72,7 +72,7 @@ const call = async (path, { method = 'GET', body, cookie } = {}) => {
   await page.getByRole('button', { name: 'Entrer' }).click()
   await page.getByRole('heading', { name: 'Avant de commencer' }).waitFor()
   await page.getByText('Chapitre 0 · Préparer tes outils').waitFor()
-  await page.getByText('Étape 1/9').waitFor()
+  await page.getByText('Étape 1/7').waitFor()
   assert.equal(await page.getByRole('button', { name: 'C’est parti' }).isDisabled(), true)
   for (const box of await page.getByRole('checkbox').all()) await box.check()
   await shot(page, 'eleve-prerequis')
@@ -134,7 +134,8 @@ const call = async (path, { method = 'GET', body, cookie } = {}) => {
   await page.getByRole('heading', { name: 'Cherche en haut à droite' }).waitFor()
   await page.getByRole('button', { name: 'Oui' }).click()
   await page.getByRole('heading', { name: 'Compte GitHub' }).waitFor()
-  const guide = await call('/api/admin/guides/1', { cookie: adminCookie })
+  const guideId = (await call('/api/admin/overview', { cookie: adminCookie })).data.guides.find((g) => g.titre.startsWith('Création pas à pas')).id
+  const guide = await call(`/api/admin/guides/${guideId}`, { cookie: adminCookie })
   assert.ok(!guide.data.steps.some((s) => s.titre === 'Ouvre github.com'), 'les étapes d’aide ne sont pas dans le guide commun')
   log('2 étapes d’aide pour l’élève seulement, puis retour sur l’étape initiale')
 
@@ -152,19 +153,27 @@ const call = async (path, { method = 'GET', body, cookie } = {}) => {
   await jump('Chapitre 2', 'Ton site a-t-il besoin')
   await page.getByRole('heading', { name: /Ton site a-t-il besoin d'une base de données/ }).waitFor()
   await page.getByText('Chapitre 2 · Création du MVP').waitFor()
-  await page.getByText('Étape 7/13').waitFor()
+  await page.getByText('Étape 5/11').waitFor()
   await shot(page, 'eleve-choix')
   log('fil d’Ariane : chapitre, étape, saut direct')
 
   // 6. Les choix envoient immédiatement à la bonne cible ; les boucles fonctionnent.
   await page.getByRole('button', { name: 'Je ne sais plus' }).click()
-  await page.getByRole('heading', { name: 'Demande à Claude Code' }).waitFor()
+  await page.getByRole('heading', { name: 'Demande à Claude', exact: true }).waitFor()
   await page.getByRole('button', { name: 'Oui' }).click()
   await page.getByRole('heading', { name: /Ton site a-t-il besoin/ }).waitFor()
   await page.getByRole('button', { name: 'Oui', exact: true }).click()
-  await page.getByRole('heading', { name: 'Demande le plan de la base' }).waitFor()
+  await page.getByRole('heading', { name: 'Crée la base de données' }).waitFor()
+  await page.getByRole('button', { name: 'Oui' }).click()
+  await page.getByRole('heading', { name: 'Donne-la à Claude Code' }).waitFor()
+  await page.getByRole('button', { name: 'Copier' }).waitFor()
+  await shot(page, 'eleve-d1')
+  await page.getByRole('button', { name: 'Oui' }).click()
+  await page.getByRole('heading', { name: 'Envoie et laisse Claude travailler' }).waitFor()
   await jump('Chapitre 2', 'Ton site a-t-il besoin')
   await page.getByRole('button', { name: 'Non', exact: true }).click()
+  await page.getByRole('heading', { name: 'Envoie et laisse Claude travailler' }).waitFor()
+  await page.getByRole('button', { name: 'Oui' }).click()
   await page.getByRole('heading', { name: 'Enregistre le travail dans GitHub' }).waitFor()
   await page.getByRole('button', { name: 'Oui' }).click()
 
@@ -209,7 +218,7 @@ const call = async (path, { method = 'GET', body, cookie } = {}) => {
   await page.getByRole('button', { name: 'Terminé' }).click()
   await page.getByRole('heading', { name: 'Bravo, guide terminé !' }).waitFor()
   await shot(page, 'eleve-fin')
-  log('choix, boucles (base de données, bug, modifications client), récaps, fin du guide')
+  log('choix, boucles (base de données D1, bug, modifications client), récaps, fin du guide')
 
   // 9. Un élève ne peut pas lire ni modifier les données d'un autre.
   const zoeLogin = await call('/api/login', { method: 'POST', body: { prenom: zoe, code: zoeCode } })

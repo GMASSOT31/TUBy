@@ -1,5 +1,7 @@
 // Importe le guide de départ (seed/guide-site-web.yaml), l'élève Alessio et son attribution.
 // Usage : node scripts/seed.mjs --local | --remote   (sans effet si le guide existe déjà)
+//   --brouillon            importe le guide non publié, sans élève ni attribution (pour le relire dans l'admin)
+//   --titre "Autre titre"  importe sous un autre titre (ex. à côté de la version actuelle)
 // Le code d'Alessio n'est pas créé ici : génère-le dans l'admin (Élèves → Nouveau code).
 import { execFileSync } from 'node:child_process'
 import { mkdtempSync, readFileSync, writeFileSync } from 'node:fs'
@@ -12,6 +14,9 @@ const wrangler = (args) => execFileSync('npx', ['wrangler', 'd1', 'execute', 'tu
 const q = (v) => (v == null ? 'NULL' : `'${String(v).replace(/'/g, "''")}'`)
 
 const data = parse(readFileSync(new URL('../seed/guide-site-web.yaml', import.meta.url), 'utf8'))
+const draft = process.argv.includes('--brouillon')
+const titleArg = process.argv.indexOf('--titre')
+if (titleArg > 0) data.guide = process.argv[titleArg + 1]
 const STUDENT = 'Alessio'
 const studentKey = q(STUDENT.toLowerCase())
 
@@ -26,7 +31,7 @@ const SITES = /(?<![\w./[])(github\.com\/new|claude\.ai|github\.com|supabase\.co
 const rich = (text) => (text || '').trim().replace(SITES, '[$1](https://$1)')
 
 const guide = `(SELECT id FROM guides WHERE titre = ${q(data.guide)} ORDER BY id DESC LIMIT 1)`
-const sql = [`INSERT INTO guides (titre, description, published) VALUES (${q(data.guide)}, 'De l''idée du client au site en ligne, étape par étape.', 1);`]
+const sql = [`INSERT INTO guides (titre, description, published) VALUES (${q(data.guide)}, 'De l''idée du client au site en ligne, étape par étape.', ${draft ? 0 : 1});`]
 let first = null
 let count = 0
 data.chapitres.forEach((ch, ci) => {
@@ -48,7 +53,7 @@ data.chapitres.forEach((ch, ci) => {
     )
   })
 })
-sql.push(
+if (!draft) sql.push(
   `INSERT INTO students (prenom, prenom_key, note) SELECT ${q(STUDENT)}, ${studentKey}, '15 ans, débutant. Comptes au nom d''un parent.' WHERE NOT EXISTS (SELECT 1 FROM students WHERE prenom_key = ${studentKey} AND archived = 0);`,
   `INSERT INTO assignments (guide_id, student_id, current_step_id) VALUES (${guide}, (SELECT id FROM students WHERE prenom_key = ${studentKey} AND archived = 0), (SELECT s.id FROM steps s JOIN chapters c ON c.id = s.chapter_id WHERE c.guide_id = ${guide} AND s.ref = ${q(first)}));`,
 )
@@ -56,4 +61,4 @@ sql.push(
 const file = join(mkdtempSync(join(tmpdir(), 'tuby-seed-')), 'seed.sql')
 writeFileSync(file, sql.join('\n') + '\n')
 wrangler(['--file', file, '--yes'])
-console.log(`Guide importé (${data.chapitres.length} chapitres, ${count} étapes) et attribué à ${STUDENT}.`)
+console.log(`Guide importé (${data.chapitres.length} chapitres, ${count} étapes)${draft ? ' en brouillon.' : ` et attribué à ${STUDENT}.`}`)

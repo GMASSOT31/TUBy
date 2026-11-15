@@ -48,20 +48,34 @@ export default function StudentApp() {
     return () => { window.clearInterval(timer); document.removeEventListener('visibilitychange', tick) }
   }, [waiting, tubeId, load])
 
-  const act = async (action: StudentAction) => {
+  // Les actions partent au serveur une par une, dans l'ordre des taps. L'écran change tout de suite
+  // (affichage optimiste) ; la réponse du serveur ne s'applique que s'il n'y a plus d'action en attente,
+  // sinon une réponse en retard ramènerait l'élève sur un écran qu'il a déjà quitté.
+  const queue = useRef<Promise<void>>(Promise.resolve())
+  const pending = useRef(0)
+  const act = (action: StudentAction) => {
     const before = tubeRef.current
     if (!before) return
     setError(null)
-    setTube(applyAction(before, action).state) // affichage immédiat, confirmé ensuite par le serveur
-    try {
-      const r = await api<{ tube: TubeState }>(`assignments/${before.assignment.id}/act`, { body: action })
-      setTube(r.tube)
-    } catch (e) {
-      if (e instanceof ApiError && e.status === 401) return setLogged(false)
-      const fresh = e instanceof ApiError && e.status === 409 ? (e.data as { tube?: TubeState } | null)?.tube : null
-      setTube(fresh ?? before)
-      if (!fresh) setError((e as Error).message)
-    }
+    const optimistic = applyAction(before, action).state
+    tubeRef.current = optimistic
+    setTube(optimistic)
+    pending.current++
+    queue.current = queue.current.then(async () => {
+      try {
+        const r = await api<{ tube: TubeState }>(`assignments/${before.assignment.id}/act`, { body: action })
+        if (--pending.current === 0) setTube(r.tube)
+      } catch (e) {
+        pending.current--
+        if (e instanceof ApiError && e.status === 401) return setLogged(false)
+        const fresh = e instanceof ApiError && e.status === 409 ? (e.data as { tube?: TubeState } | null)?.tube : null
+        if (fresh) { if (pending.current === 0) setTube(fresh) }
+        else {
+          setError((e as Error).message)
+          if (pending.current === 0) void load(before.assignment.id)
+        }
+      }
+    })
   }
 
   const logout = async () => {

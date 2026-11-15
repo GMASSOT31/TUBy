@@ -21,32 +21,24 @@ chapitres:
     objectif: "GitHub, c'est le coffre où sera rangé le code de tes sites."
     quoi: "Va sur github.com, clique « Sign up » puis « Continue with Google ». Déjà fait hier ? Réponds Oui."
   - type: action
-    titre: "Compte Supabase"
-    objectif: "Supabase, c'est la mémoire de tes sites (messages, réservations, comptes)."
-    quoi: "Va sur supabase.com, clique « Start your project » puis « Continue with GitHub ». Déjà fait hier ? Réponds Oui."
-  - type: action
     titre: "Compte Cloudflare"
-    objectif: "Cloudflare, c'est ce qui met ton site en ligne gratuitement."
+    objectif: "Cloudflare met ton site en ligne gratuitement et garde sa mémoire (messages, réservations)."
     quoi: "Va sur dash.cloudflare.com et crée un compte avec Google. Choisis toujours le plan gratuit (Free). Déjà fait hier ? Réponds Oui."
   - type: action
     titre: "Relie GitHub à Claude Code"
     objectif: "Autoriser Claude à écrire le code dans ton coffre GitHub."
     quoi: "Dans Claude, clique sur « Code » dans le menu de gauche. Suis les boutons pour connecter GitHub et installer l'application Claude. Quand on te demande quels dépôts autoriser, choisis « All repositories »."
   - type: action
-    titre: "Ajoute le connecteur Supabase"
-    objectif: "Permettre à Claude de créer la base de données tout seul."
-    quoi: "Dans Claude : Réglages → Connecteurs → cherche « Supabase » → Connecter, puis accepte."
-  - type: action
     titre: "Crée ton projet Claude « Mes sites »"
     objectif: "Régler Claude une fois pour toutes pour qu'il t'explique tout simplement."
     quoi: |
       Dans Claude : Projets → Nouveau projet → nomme-le « Mes sites ».
       Dans les instructions du projet, colle ce texte :
-      [À COPIER] Je suis débutant complet, je ne sais pas coder. Parle-moi en français, simplement, sans jargon. Donne-moi une seule chose à faire à la fois et dis-moi exactement où cliquer. Quand il y a plusieurs solutions, choisis la plus simple et la gratuite sans me demander. N'utilise jamais de service payant.
+      [À COPIER] Je suis débutant complet, je ne sais pas coder. Parle-moi en français, simplement, sans jargon. Donne-moi une seule chose à faire à la fois et dis-moi exactement où cliquer. Quand il y a plusieurs solutions, choisis la plus simple et la gratuite sans me demander. N'utilise jamais de service payant. Pour héberger un site et enregistrer ses données, utilise uniquement Cloudflare (Pages et D1).
   - type: recap
     points:
-    - "Tu as tes 4 comptes : Claude, GitHub, Supabase, Cloudflare"
-    - "Claude peut écrire dans GitHub et créer des bases Supabase"
+    - "Tu as tes 3 comptes : Claude, GitHub, Cloudflare"
+    - "Claude peut écrire le code de tes sites dans GitHub"
     - "Ton projet « Mes sites » est réglé pour t'expliquer simplement"
 
 - titre: "Chapitre 1 · SCOPE du cahier des charges"
@@ -60,7 +52,7 @@ chapitres:
   - type: action
     titre: "Ouvre une conversation"
     objectif: "Avoir un endroit où écrire le cahier des charges."
-    quoi: "Ouvre une conversation CHAT avec Claude, dans ton projet « Mes sites »."
+    quoi: "Ouvre une conversation CHAT avec Claude, dans ton projet « Mes sites ». Garde-la ouverte : tu y reviendras au chapitre 2."
   - type: action
     titre: "Écris ce que veut ton client"
     objectif: "Tout sortir de ta tête."
@@ -73,7 +65,7 @@ chapitres:
     si_non: "Ajoute des liens de sites qu'il aime. 3 maximum."
   - type: verif
     question: "T'as listé tout ce que le PROPRIÉTAIRE du site doit pouvoir faire ?"
-    si_non: "Ajoute-le. Exemples : modifier les textes, lire les messages reçus, ajouter des photos, changer les horaires."
+    si_non: "Ajoute-le. Exemples : modifier les textes, lire les messages reçus, voir les réservations, changer les horaires."
   - type: verif
     question: "T'as listé tout ce que le VISITEUR du site doit pouvoir faire ?"
     si_non: "Ajoute-le. Exemples : voir les services et les prix, envoyer un message, réserver, trouver l'adresse."
@@ -92,7 +84,7 @@ chapitres:
     objectif: "Transformer ton cahier des charges en consigne parfaite."
     quoi: |
       Envoie ce message dans la même conversation :
-      [À COPIER] Rédige maintenant un prompt détaillé pour que Claude Code crée ce site. Contraintes obligatoires : uniquement des outils gratuits ; site simple en HTML, CSS et JavaScript sans étape de build ; parfait sur téléphone ; hébergé sur Cloudflare Pages ; Supabase seulement si le site doit enregistrer des données ; Claude Code doit travailler en autonomie et m'expliquer simplement ce qu'il a fait. Dis-moi aussi clairement si ce site a besoin d'une base de données : oui ou non.
+      [À COPIER] Rédige maintenant un prompt détaillé pour que Claude Code crée ce site. Contraintes obligatoires à recopier dans le prompt : uniquement des outils gratuits ; site simple en HTML, CSS et JavaScript, sans étape de build, rangé dans le dossier « public » ; parfait sur téléphone ; hébergé sur Cloudflare Pages ; si le site doit enregistrer des données, utiliser uniquement Cloudflare D1 avec des Pages Functions dans le dossier « functions », une liaison nommée DB déclarée dans wrangler.toml (avec pages_build_output_dir = "public"), et des tables qui se créent toutes seules au premier lancement ; je donnerai l'identifiant de la base D1 dans mon message ; aucun réglage ni variable secrète à faire à la main : si un mot de passe est nécessaire pour le propriétaire, Claude Code le choisit et me le donne à la fin ; Claude Code travaille en autonomie, sans me poser de questions techniques, et m'explique simplement ce qu'il a fait. Dis-moi aussi clairement si ce site a besoin d'une base de données : oui ou non.
   - type: action
     titre: "Copie le prompt"
     objectif: "L'avoir prêt à coller."
@@ -116,55 +108,54 @@ chapitres:
     objectif: "Un dépôt GitHub = un site."
     quoi: "Va sur github.com/new. Nom : celui du site, en minuscules, sans espace ni accent (ex. pizzeria-luigi). Choisis « Private », coche « Add a README file », puis « Create repository »."
   - type: action
-    titre: "Ouvre Claude Code"
-    objectif: "Trouver l'atelier."
-    quoi: "Dans Claude, clique sur « Code », en haut à gauche de l'interface. Trouvé ?"
-  - type: action
-    titre: "Choisis ton dépôt"
+    titre: "Ouvre Claude Code sur ton dépôt"
     objectif: "Dire à Claude où travailler."
-    quoi: "Dans la zone de message, sélectionne le dépôt que tu viens de créer."
+    quoi: "Dans Claude, clique sur « Code » dans le menu de gauche. Dans la zone de message, sélectionne le dépôt que tu viens de créer."
   - type: action
-    titre: "Colle le prompt"
-    objectif: "Lancer la fabrication."
-    quoi: "Colle ton cahier des charges (le prompt) dans Claude Code et envoie."
-  - type: action
-    titre: "Laisse Claude travailler"
-    objectif: "Obtenir la première version."
-    quoi: "Attends, ça peut prendre plusieurs minutes. S'il te pose une question que tu ne comprends pas, réponds « choisis le plus simple pour moi ». Réponds Oui ici quand il annonce qu'il a terminé."
+    titre: "Colle ton prompt"
+    objectif: "Préparer la commande."
+    quoi: "Colle ton prompt dans la zone de message de Claude Code. N'envoie pas encore : on vérifie un détail juste après."
   - type: choix
     id: besoin_base
     question: "Ton site a-t-il besoin d'une base de données ? (Claude te l'a dit à la fin du chapitre 1)"
     options:
     - label: "Oui"
-      goto: base_1
+      goto: d1_creer
     - label: "Non"
-      goto: publier_code
+      goto: envoyer
     - label: "Je ne sais plus"
       goto: base_question
   - type: action
     id: base_question
-    titre: "Demande à Claude Code"
-    objectif: "Savoir si on a besoin de Supabase."
+    titre: "Demande à Claude"
+    objectif: "Savoir si ton site a besoin d'une base de données."
     quoi: |
-      Envoie dans Claude Code :
-      [À COPIER] Est-ce que ce site a besoin d'une base de données Supabase pour fonctionner ? Réponds juste oui ou non.
+      Retourne dans ta conversation du chapitre 1 (dans « Mes sites ») et envoie :
+      [À COPIER] Est-ce que ce site a besoin d'une base de données ? Réponds juste oui ou non.
+      Puis reviens ici.
     apres: besoin_base
   - type: action
-    id: base_1
-    titre: "Demande le plan de la base"
-    objectif: "Obtenir la commande exacte à donner."
+    id: d1_creer
+    titre: "Crée la base de données"
+    objectif: "La mémoire de ton site (messages, réservations…), chez Cloudflare."
     quoi: |
-      Envoie dans Claude Code :
-      [À COPIER] Écris-moi le message exact que je dois coller dans une conversation Claude (qui a le connecteur Supabase) pour créer le projet Supabase gratuit de ce site, ses tables et ses règles de sécurité.
-      Copie sa réponse.
+      Ouvre dash.cloudflare.com dans un nouvel onglet. Menu de gauche : « Storage & databases » → « D1 SQL database » → « Create Database ».
+      Nom : le même que ton dépôt (ex. pizzeria-luigi). Ne touche à rien d'autre et clique « Create ».
   - type: action
-    titre: "Fais créer la base"
-    objectif: "Claude crée la base tout seul."
-    quoi: "Ouvre une nouvelle conversation CHAT dans « Mes sites », colle le message et envoie. Accepte les autorisations Supabase. Le prix affiché doit être 0 : sinon, appuie sur À l'aide. Le plan gratuit permet 2 projets actifs."
+    titre: "Donne-la à Claude Code"
+    objectif: "Relier ton site à sa base."
+    quoi: |
+      1. Copie cette phrase et colle-la à la fin de ton message dans Claude Code :
+      [À COPIER] Voici l'identifiant de ma base Cloudflare D1 :
+      2. Dans l'onglet Cloudflare, sur la page de ta base, copie le « Database ID » (une longue suite de lettres et de chiffres) et colle-le juste après la phrase.
   - type: action
-    titre: "Donne les clés à Claude Code"
-    objectif: "Brancher le site sur sa base."
-    quoi: "Demande au Chat : « donne-moi l'URL du projet et la clé publishable ». Colle les deux dans Claude Code. Ne partage jamais une clé appelée « secret » ou « service_role »."
+    id: envoyer
+    titre: "Envoie et laisse Claude travailler"
+    objectif: "Obtenir la première version."
+    quoi: |
+      Envoie ton message. Attends, ça peut prendre plusieurs minutes. S'il te pose une question que tu ne comprends pas, réponds « choisis le plus simple pour moi ».
+      S'il te donne un mot de passe à la fin, note-le : c'est celui du propriétaire du site.
+      Réponds Oui ici quand il annonce qu'il a terminé.
   - type: action
     id: publier_code
     titre: "Enregistre le travail dans GitHub"
@@ -174,7 +165,7 @@ chapitres:
     points:
     - "Tu as créé le dépôt GitHub du site"
     - "Claude Code a fabriqué la première version"
-    - "La base de données est branchée (si le site en a besoin)"
+    - "Ta base de données est prête chez Cloudflare (si ton site en a besoin)"
     - "Le code est rangé dans GitHub"
 
 - titre: "Chapitre 3 · Mise en ligne"
@@ -188,7 +179,7 @@ chapitres:
   - type: action
     titre: "Crée le projet Cloudflare"
     objectif: "Relier Cloudflare à ton dépôt."
-    quoi: "Sur dash.cloudflare.com : « Workers & Pages » → « Create » → onglet « Pages » → « Connect to Git »."
+    quoi: "Sur dash.cloudflare.com : « Workers & Pages » → « Create » → choisis « Pages » → « Connect to Git ». Si tu ne vois pas « Pages », cherche en bas de l'écran le lien qui parle de Pages."
   - type: action
     titre: "Choisis le dépôt"
     objectif: "Dire à Cloudflare quel site publier."
@@ -196,7 +187,7 @@ chapitres:
   - type: action
     titre: "Lance la mise en ligne"
     objectif: "Publier."
-    quoi: "Branche : main. Laisse « Build command » vide. Pour « Build output directory », demande à Claude Code « quel dossier dois-je indiquer à Cloudflare Pages ? ». Clique « Save and Deploy »."
+    quoi: "Branche : main. Laisse « Build command » vide. Dans « Build output directory », écris « public ». Clique « Save and Deploy », puis attends la fin (1 à 2 minutes)."
   - type: verif
     question: "Ouvre le lien qui finit par .pages.dev : ton site s'affiche ?"
     si_non: "Copie le message d'erreur de Cloudflare, colle-le dans Claude Code et écris « corrige ». Refais ensuite « Create PR » puis « Merge », attends 1 minute et recharge."
@@ -218,7 +209,9 @@ chapitres:
     id: test_ordi
     titre: "Teste sur ordinateur"
     objectif: "Vérifier chaque fonctionnalité."
-    quoi: "Reprends ton cahier des charges ligne par ligne et essaie tout : chaque bouton, chaque page, chaque formulaire."
+    quoi: |
+      Reprends ton cahier des charges ligne par ligne et essaie tout : chaque bouton, chaque page, chaque formulaire.
+      Si ton site enregistre des données, fais un vrai essai (envoie un message, réserve) et vérifie que le propriétaire le retrouve.
   - type: action
     titre: "Teste sur téléphone"
     objectif: "La plupart des visiteurs seront sur téléphone."
@@ -278,11 +271,11 @@ chapitres:
   - type: verif
     id: mode_emploi
     question: "Le propriétaire sait utiliser sa partie du site ?"
-    si_non: "Demande à Claude (Chat) : « écris un mode d'emploi d'une page pour le propriétaire du site », et envoie-le au client."
+    si_non: "Demande à Claude (Chat) : « écris un mode d'emploi d'une page pour le propriétaire du site », et envoie-le au client avec son mot de passe."
   - type: action
     titre: "Range ton dossier client"
     objectif: "Retrouver tout dans 6 mois."
-    quoi: "Note dans un document : le nom du client, le lien du site, le nom du dépôt GitHub. Un nom de domaine personnalisé (ex. monsite.fr) est payant : c'est au client de l'acheter s'il en veut un."
+    quoi: "Note dans un document : le nom du client, le lien du site, le nom du dépôt GitHub, et le mot de passe du propriétaire s'il y en a un. Un nom de domaine personnalisé (ex. monsite.fr) est payant : c'est au client de l'acheter s'il en veut un."
   - type: recap
     points:
     - "Le client a validé son site"

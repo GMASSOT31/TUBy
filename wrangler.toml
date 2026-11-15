@@ -5,5 +5,5 @@ pages_build_output_dir = "dist"
 [[d1_databases]]
 binding = "DB"
 database_name = "tuby"
-database_id = "00000000-0000-0000-0000-000000000000"
+database_id = "6d6c7e69-b88e-4337-a4b9-303b74274750"
 migrations_dir = "migrations"

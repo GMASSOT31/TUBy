@@ -1,7 +1,7 @@
 // Le tube : une seule étape à l'écran, une sortie évidente sur chaque écran.
 // Composant sans réseau : il reçoit un état et émet des actions (sert aussi à l'aperçu admin).
 import { useState, type ReactNode } from 'react'
-import { locate, nextStep, stepLabel, type Step, type StudentAction, type TubeState } from '../../shared/tube'
+import { canRestart, locate, nextStep, stepLabel, type Step, type StudentAction, type TubeState } from '../../shared/tube'
 import { Button, Icon, Notice, RichText, Sheet } from '../ui'
 
 interface Props {
@@ -44,8 +44,13 @@ export function Tube({ state, onAct, error, planFooter }: Props) {
       </header>
 
       {finished ? (
-        <Body k="fin" footer={<Button className="w-full" variant="secondary" icon="list" onClick={() => setPlanOpen(true)}>Revoir une étape</Button>}>
-          <Message title="Bravo, guide terminé !" text="Tu es allé jusqu’au bout. Pour ton prochain site, ouvre le plan et saute directement aux étapes utiles." />
+        <Body k="fin" footer={
+          <>
+            {canRestart(state) && <Button className="mb-3 w-full" icon="plus" onClick={() => onAct({ action: 'restart' })}>Commencer un nouveau site</Button>}
+            <Button className="w-full" variant={canRestart(state) ? 'neutral' : 'secondary'} icon="list" onClick={() => setPlanOpen(true)}>Revoir une étape</Button>
+          </>
+        }>
+          <Message title="Bravo, guide terminé !" text={canRestart(state) ? `Tu es allé jusqu’au bout. Pour ton prochain site, touche « Commencer un nouveau site » : tu repars directement à « ${chapters[1].titre} ». Tes outils sont déjà prêts.` : 'Tu es allé jusqu’au bout.'} />
         </Body>
       ) : assignment.status === 'bloque' ? (
         <Body k="attente" footer={<Button className="w-full" variant="neutral" onClick={() => onAct({ action: 'cancel_help' })}>Finalement, j’ai réussi : je continue</Button>}>
@@ -63,7 +68,7 @@ export function Tube({ state, onAct, error, planFooter }: Props) {
         <StepScreen key={step.id} state={state} step={step} onAct={onAct} error={error} />
       )}
 
-      {planOpen && <Plan state={state} onClose={() => setPlanOpen(false)} footer={planFooter} onJump={(id) => { setPlanOpen(false); onAct({ action: 'jump', to: id }) }} />}
+      {planOpen && <Plan state={state} onClose={() => setPlanOpen(false)} footer={planFooter} onJump={(id) => { setPlanOpen(false); onAct({ action: 'jump', to: id }) }} onRestart={() => { setPlanOpen(false); onAct({ action: 'restart' }) }} />}
     </div>
   )
 }
@@ -235,7 +240,7 @@ function StepScreen({ state, step, onAct, error }: { state: TubeState; step: Ste
 }
 
 /** Plan du guide : chapitres repliables, état de chaque étape, tap = on y va directement. */
-function Plan({ state, onClose, onJump, footer }: { state: TubeState; onClose: () => void; onJump: (stepId: number) => void; footer?: ReactNode }) {
+function Plan({ state, onClose, onJump, onRestart, footer }: { state: TubeState; onClose: () => void; onJump: (stepId: number) => void; onRestart: () => void; footer?: ReactNode }) {
   const current = state.assignment.current_step_id
   const currentChapter = state.steps.find((s) => s.id === current)?.chapter_id
   const [openChapter, setOpenChapter] = useState<number | undefined>(currentChapter)
@@ -282,6 +287,12 @@ function Plan({ state, onClose, onJump, footer }: { state: TubeState; onClose: (
           )
         })}
       </div>
+      {canRestart(state) && !blocked && (
+        <Button className="mt-5 w-full" variant="secondary" icon="plus" onClick={() => {
+          const [setup, start] = state.chapters
+          if (window.confirm(`Commencer un nouveau site ?\n\nTu repars à « ${start.titre} ». « ${setup.titre} » reste fait ; toutes les autres étapes repassent à faire.`)) onRestart()
+        }}>Commencer un nouveau site</Button>
+      )}
       {footer && <div className="mt-5 flex flex-wrap items-center justify-between gap-2 border-t border-line pt-3">{footer}</div>}
     </Sheet>
   )

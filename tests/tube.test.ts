@@ -88,6 +88,24 @@ describe('pause et aide', () => {
   })
 })
 
+describe('nouveau site', () => {
+  it('remet tout à zéro sauf le premier chapitre et repart au chapitre suivant', () => {
+    const done = { status: 'fait' as const, answer: null }
+    const s: TubeState = { ...state(base, 6), assignment: { id: 9, status: 'termine', current_step_id: 6 }, progress: { 1: done, 2: done, 4: done, 5: done, 6: done } }
+    const { state: r } = applyAction(s, { action: 'restart' })
+    expect(r.assignment).toMatchObject({ status: 'en_cours', current_step_id: 5 })
+    expect(Object.keys(r.progress).map(Number).sort()).toEqual([1, 2, 4])
+  })
+  it('passe d’abord par une étape d’aide placée en tête du chapitre suivant', () => {
+    const helper = step(10, 2, 0, { personal: true, inserted_before_step_id: 5 })
+    expect(applyAction(state([...base, helper], 6), { action: 'restart' }).state.assignment.current_step_id).toBe(10)
+  })
+  it('impossible tant qu’une demande d’aide attend', () => {
+    const s = applyAction(state(base, 4), { action: 'help', step_id: 4, message: 'perdu' }).state
+    expect(applyAction(s, { action: 'restart' }).error).toBe('bloque')
+  })
+})
+
 describe('repères', () => {
   it('le fil d’Ariane donne le chapitre et « étape n/total »', () => {
     const s = state(base, 5)

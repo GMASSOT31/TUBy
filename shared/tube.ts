@@ -137,6 +137,7 @@ export type StudentAction =
   | { action: 'help'; step_id: number; message: string }
   | { action: 'cancel_help' }
   | { action: 'jump'; to: number }
+  | { action: 'restart' } // nouveau tour : tout est remis à zéro sauf le premier chapitre
 
 /** Applique une action d'élève à un état, sans rien écrire : sert à l'API et à l'aperçu. */
 export function applyAction(state: TubeState, act: StudentAction): { state: TubeState; error?: string } {
@@ -192,8 +193,22 @@ export function applyAction(state: TubeState, act: StudentAction): { state: Tube
       s.notice = null
       return { state: s }
     }
+    case 'restart': {
+      if (s.assignment.status === 'bloque') return { state, error: 'bloque' }
+      const [setup, second] = s.chapters
+      const start = second && seq.find((x) => x.chapter_id === second.id)
+      if (!start) return { state, error: 'invalid' }
+      for (const x of seq) if (x.chapter_id !== setup.id) delete s.progress[x.id]
+      s.assignment.current_step_id = start.id
+      s.assignment.status = 'en_cours'
+      s.notice = null
+      return { state: s }
+    }
   }
 }
+
+/** Le guide permet-il un nouveau tour (au moins 2 chapitres) ? */
+export const canRestart = (state: Pick<TubeState, 'chapters'>) => state.chapters.length >= 2
 
 /** Titre affichable d'une étape, quel que soit son type. */
 export function stepLabel(step: Pick<Step, 'type' | 'titre'>): string {

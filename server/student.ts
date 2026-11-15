@@ -94,6 +94,7 @@ export function parseAction(raw: Record<string, unknown>): StudentAction {
     case 'pause': return { action: 'pause', step_id: num(raw.step_id) }
     case 'help': return { action: 'help', step_id: num(raw.step_id), message: typeof raw.message === 'string' ? raw.message : '' }
     case 'jump': return { action: 'jump', to: num(raw.to) }
+    case 'restart': return { action: 'restart' }
     case 'resume': return { action: 'resume' }
     case 'cancel_help': return { action: 'cancel_help' }
   }
@@ -124,6 +125,12 @@ export async function act(env: Env, studentId: number, assignmentId: number, act
     )
   } else if (action.action === 'jump') {
     writes.push(markSeen)
+  } else if (action.action === 'restart') {
+    // Le premier chapitre (les outils) reste fait ; tout le reste repart de zéro.
+    writes.push(
+      db.prepare('DELETE FROM step_progress WHERE assignment_id = ? AND step_id NOT IN (SELECT id FROM steps WHERE chapter_id = ?)').bind(a.id, before.chapters[0].id),
+      markSeen,
+    )
   } else if (action.action === 'help') {
     writes.push(db.prepare('INSERT INTO help_requests (assignment_id, step_id, message) VALUES (?, ?, ?)').bind(a.id, action.step_id, state.help!.message))
   } else if (action.action === 'cancel_help') {

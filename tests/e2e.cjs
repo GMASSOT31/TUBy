@@ -220,6 +220,22 @@ const call = async (path, { method = 'GET', body, cookie } = {}) => {
   await shot(page, 'eleve-fin')
   log('choix, boucles (base de données D1, bug, modifications client), récaps, fin du guide')
 
+  // Nouveau site depuis l'écran de fin : le chapitre 0 reste fait, le reste repart de zéro.
+  await page.getByRole('button', { name: 'Commencer un nouveau site' }).click()
+  await page.getByRole('heading', { name: 'Avant de commencer' }).waitFor()
+  await page.getByText('Chapitre 1 · SCOPE du cahier des charges').waitFor()
+  await page.getByText('Étape 1/12').waitFor()
+  await page.getByRole('button', { name: 'Ouvrir le plan du guide' }).click()
+  const dlg = page.getByRole('dialog')
+  await dlg.getByText('0/12').waitFor()
+  const ch0 = await dlg.getByRole('button', { name: /Chapitre 0/ }).innerText()
+  assert.match(ch0, /\b[1-9]\d*\/\d+/, `chapitre 0 gardé (${ch0})`) // ses étapes faites sont conservées
+  await dlg.getByText('0/12').waitFor() // chapitre 1 : remis à zéro
+  await dlg.getByText('0/11').waitFor() // chapitre 2 : remis à zéro
+  await shot(page, 'eleve-nouveau-site')
+  await page.keyboard.press('Escape')
+  log('nouveau site (écran de fin) : chapitre 0 gardé, chapitres suivants remis à zéro')
+
   // 9. Un élève ne peut pas lire ni modifier les données d'un autre.
   const zoeLogin = await call('/api/login', { method: 'POST', body: { prenom: zoe, code: zoeCode } })
   assert.equal(zoeLogin.status, 200)
@@ -262,9 +278,10 @@ const call = async (path, { method = 'GET', body, cookie } = {}) => {
   const desk = await browser.newContext({ viewport: { width: 1440, height: 900 }, storageState: await ctx.storageState() })
   const dp = await desk.newPage()
   await dp.goto(BASE)
-  await dp.getByRole('heading', { name: 'Bravo, guide terminé !' }).waitFor()
+  await dp.getByRole('heading', { name: 'Avant de commencer' }).waitFor()
   await dp.getByRole('button', { name: 'Ouvrir le plan du guide' }).click()
-  await dp.getByRole('dialog').getByRole('button', { name: /Chapitre 1/ }).click()
+  const ch1 = dp.getByRole('dialog').getByRole('button', { name: /Chapitre 1/ })
+  if ((await ch1.getAttribute('aria-expanded')) !== 'true') await ch1.click()
   await dp.getByRole('dialog').getByRole('button', { name: /Demande le prompt pour Claude Code/ }).click()
   await dp.getByRole('heading', { name: 'Demande le prompt pour Claude Code' }).waitFor()
   await shot(dp, 'ordinateur-etape')
@@ -272,6 +289,14 @@ const call = async (path, { method = 'GET', body, cookie } = {}) => {
   assert.equal(manifest.display, 'standalone')
   assert.ok((await fetch(BASE + '/icons/icon-180.png')).ok)
   log('ordinateur OK, manifeste PWA et icône iPhone présents')
+
+  // Nouveau site depuis le plan, en cours de route (avec confirmation).
+  await dp.getByRole('button', { name: 'Ouvrir le plan du guide' }).click()
+  dp.once('dialog', (d) => d.accept())
+  await dp.getByRole('dialog').getByRole('button', { name: 'Commencer un nouveau site' }).click()
+  await dp.getByRole('heading', { name: 'Avant de commencer' }).waitFor()
+  await dp.getByText('Étape 1/12').waitFor()
+  log('nouveau site (plan du guide) : confirmation puis retour au chapitre 1')
 
   await browser.close()
   console.log('\nTous les critères d’acceptation passent.')

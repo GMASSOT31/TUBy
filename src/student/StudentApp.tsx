@@ -87,7 +87,12 @@ export default function StudentApp() {
   }
 
   const many = home.assignments.length > 1
-  const quit = <button type="button" onClick={logout} className="min-h-11 text-sm text-muted underline underline-offset-2">Se déconnecter</button>
+  const quit = (
+    <span className="flex items-center gap-4">
+      <a href="/admin" className="inline-flex min-h-11 items-center text-sm text-muted underline underline-offset-2">Espace admin</a>
+      <button type="button" onClick={logout} className="min-h-11 text-sm font-medium text-accent">Se déconnecter</button>
+    </span>
+  )
 
   if (tube) {
     return (
@@ -167,6 +172,7 @@ function Login({ onDone }: { onDone: () => void }) {
         {error && <Notice tone="error">{error}</Notice>}
         <Button type="submit" className="w-full" disabled={busy || !prenom.trim() || code.trim().length < 6}>{busy ? 'Connexion…' : 'Entrer'}</Button>
       </form>
+      <p className="mt-8 text-center"><a href="/admin" className="inline-flex min-h-11 items-center text-sm text-muted underline underline-offset-2">Espace admin</a></p>
     </Centered>
   )
 }

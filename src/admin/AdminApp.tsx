@@ -91,6 +91,10 @@ export default function AdminApp() {
               <NavLink to="/eleves" className={tab}>Élèves</NavLink>
               <NavLink to="/guides" className={tab}>Guides</NavLink>
             </nav>
+            <div className="flex w-full items-center justify-end gap-4 text-sm sm:w-auto">
+              <a href="/" className="inline-flex min-h-11 items-center text-muted underline underline-offset-2">Espace élève</a>
+              <button type="button" onClick={logout} className="min-h-11 font-medium text-accent">Se déconnecter</button>
+            </div>
           </header>
           {error && <div className="mb-4"><Notice tone="error">{error}</Notice></div>}
           <Routes>
@@ -130,6 +134,7 @@ function AdminLogin({ onDone }: { onDone: () => Promise<void> }) {
         {error && <Notice tone="error">{error}</Notice>}
         <Button type="submit" className="w-full" disabled={busy || !password}>{busy ? 'Connexion…' : 'Entrer'}</Button>
       </form>
+      <p className="mt-8 text-center"><a href="/" className="inline-flex min-h-11 items-center text-sm text-muted underline underline-offset-2">Espace élève</a></p>
     </div>
   )
 }

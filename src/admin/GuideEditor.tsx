@@ -227,59 +227,168 @@ export function GuidePreview() {
   )
 }
 
-// ── Plan du guide : diagramme du parcours (Mermaid, chargé à la demande) ─────
+// ── Plan du guide : le parcours en liste, avec ses embranchements et ses boucles ──
 
-function toMermaid(d: GuideData): string {
-  const seq = buildSequence(d.chapters, d.steps)
-  const text = (s: string) => `"${(s.length > 46 ? s.slice(0, 44) + '…' : s).replace(/"/g, '#quot;')}"`
-  const node = (s: Step) => {
-    const t = text(stepLabel(s))
-    return `S${s.id}${s.type === 'prerequis' ? `[/${t}/]` : s.type === 'recap' ? `[[${t}]]` : s.type === 'verif' || s.type === 'choix' ? `{${t}}` : `[${t}]`}`
-  }
-  const byRef = new Map(seq.map((s) => [s.ref, s]))
-  const out = ['flowchart TD', '  START([Connexion : prénom + code])']
-  d.chapters.forEach((c) => {
-    out.push(`  subgraph C${c.id}[${text(c.titre)}]`)
-    seq.filter((s) => s.chapter_id === c.id).forEach((s) => out.push(`    ${node(s)}`))
-    out.push('  end')
-  })
-  if (seq[0]) out.push(`  START --> S${seq[0].id}`)
-  seq.forEach((s, i) => {
-    const next = seq[i + 1] ? `S${seq[i + 1].id}` : 'FIN'
-    const to = (ref: string | null | undefined) => (ref && byRef.has(ref) ? `S${byRef.get(ref)!.id}` : next)
-    if (s.type === 'choix') (s.config.options ?? []).forEach((o) => out.push(`  S${s.id} -- ${text(o.label)} --> ${to(o.goto)}`))
-    else out.push(`  S${s.id} --> ${to(s.config.apres)}`)
-  })
-  out.push('  FIN([Guide terminé])')
-  return out.join('\n')
+const TYPE_STYLE: Record<StepType, string> = {
+  prerequis: 'bg-line text-muted',
+  action: 'bg-accent-soft text-accent',
+  verif: 'bg-line text-warn',
+  choix: 'bg-accent text-on-accent',
+  recap: 'bg-line text-ok',
 }
+
+interface Pos { chapter: number; index: number; step: Step }
 
 export function GuideDiagram() {
   const { id, data, error } = useGuide()
-  const box = useRef<HTMLDivElement>(null)
-  const [failed, setFailed] = useState<string | null>(null)
-  useEffect(() => {
-    if (!data) return
-    let cancelled = false
-    void (async () => {
-      try {
-        const { default: mermaid } = await import('mermaid')
-        const dark = window.matchMedia('(prefers-color-scheme: dark)').matches
-        mermaid.initialize({ startOnLoad: false, securityLevel: 'strict', theme: dark ? 'dark' : 'neutral', flowchart: { useMaxWidth: false } })
-        const { svg } = await mermaid.render(`plan-${data.guide.id}`, toMermaid(data))
-        if (!cancelled && box.current) box.current.innerHTML = svg
-      } catch (e) {
-        if (!cancelled) setFailed((e as Error).message)
-      }
-    })()
-    return () => { cancelled = true }
+  const [open, setOpen] = useState<Set<number>>(new Set())
+  const [details, setDetails] = useState<Set<number>>(new Set())
+  const [flash, setFlash] = useState<number | null>(null)
+  const started = useRef(false)
+
+  const { byRef, order } = useMemo(() => {
+    const byRef = new Map<string, Pos>()
+    const order = new Map<number, Pos>()
+    data?.chapters.forEach((c, ci) => data.steps.filter((s) => s.chapter_id === c.id).forEach((s, si) => {
+      const pos = { chapter: ci, index: si, step: s }
+      byRef.set(s.ref, pos)
+      order.set(s.id, pos)
+    }))
+    return { byRef, order }
   }, [data])
+
+  useEffect(() => {
+    if (data && !started.current) { started.current = true; setOpen(new Set(data.chapters.slice(0, 1).map((c) => c.id))) }
+  }, [data])
+
+  if (!data) return error ? <Notice tone="error">{error}</Notice> : <p className="text-muted">Chargement…</p>
+
+  const toggle = (set: Set<number>, n: number) => { const next = new Set(set); if (next.has(n)) next.delete(n); else next.add(n); return next }
+  const allOpen = open.size === data.chapters.length
+
+  /** Ouvre le chapitre visé, fait défiler jusqu'à l'étape et la met en évidence un instant. */
+  const goTo = (pos: Pos) => {
+    const chapterId = data.chapters[pos.chapter].id
+    setOpen((o) => new Set(o).add(chapterId))
+    window.setTimeout(() => {
+      document.getElementById(`step-${pos.step.id}`)?.scrollIntoView({ behavior: 'smooth', block: 'center' })
+      setFlash(pos.step.id)
+      window.setTimeout(() => setFlash(null), 1600)
+    }, 60)
+  }
+  const jumpChapter = (ci: number) => {
+    const c = data.chapters[ci]
+    setOpen((o) => new Set(o).add(c.id))
+    window.setTimeout(() => document.getElementById(`chapitre-${c.id}`)?.scrollIntoView({ behavior: 'smooth', block: 'start' }), 60)
+  }
+
+  const label = (p: Pos) => `${p.chapter}.${p.index + 1} ${stepLabel(p.step)}`
+  /** Pastille cliquable vers une autre étape ; ↩ si on revient en arrière (boucle). */
+  const Target = ({ from, to }: { from: Pos; to: Pos | undefined }) => {
+    if (!to) return <span className="text-muted">l’étape suivante</span>
+    const back = to.chapter < from.chapter || (to.chapter === from.chapter && to.index <= from.index)
+    return (
+      <button type="button" onClick={() => goTo(to)} className="pressable inline-flex min-h-9 max-w-full items-center gap-1.5 rounded-full border border-line bg-surface px-3 py-1 text-left text-sm font-medium text-accent">
+        <span aria-hidden="true">{back ? '↩' : '→'}</span>
+        <span className="min-w-0 leading-snug">{label(to)}</span>
+        {back && <span className="sr-only">(retour en arrière)</span>}
+      </button>
+    )
+  }
+
   return (
     <>
       <Link to={`/guides/${id}`} className="mb-2 inline-flex min-h-11 items-center gap-1 text-sm font-medium text-accent"><Icon name="back" size={18} /> Retour au guide</Link>
       <H1>Plan du guide</H1>
-      {(error || failed) && <Notice tone="error">{error || failed}</Notice>}
-      <Card className="overflow-auto p-4"><div ref={box} className="min-h-40 w-max">{!data && <p className="text-muted">Chargement…</p>}</div></Card>
+      <p className="-mt-2 mb-4 text-muted">{data.guide.titre}</p>
+
+      <div className="sticky top-0 z-30 -mx-4 mb-4 border-b border-line bg-bg/95 px-4 py-2 backdrop-blur">
+        <div className="flex items-center gap-2 overflow-x-auto pb-1" role="navigation" aria-label="Aller à un chapitre">
+          {data.chapters.map((c, ci) => (
+            <button key={c.id} type="button" onClick={() => jumpChapter(ci)} className="pressable min-h-10 shrink-0 rounded-full bg-accent-soft px-4 text-sm font-semibold text-accent">Ch. {ci}</button>
+          ))}
+          <button type="button" onClick={() => setOpen(allOpen ? new Set() : new Set(data.chapters.map((c) => c.id)))} className="min-h-10 shrink-0 px-3 text-sm font-medium text-muted underline underline-offset-2">
+            {allOpen ? 'Tout replier' : 'Tout déplier'}
+          </button>
+        </div>
+      </div>
+
+      <details className="mb-4 rounded-control border border-line bg-surface px-4 py-2 text-sm">
+        <summary className="flex min-h-11 items-center font-medium text-muted">Légende</summary>
+        <div className="space-y-2 pb-2">
+          <div className="flex flex-wrap gap-2">{STEP_TYPES.map((t) => <span key={t.type} className={`rounded-full px-2.5 py-1 text-xs font-semibold ${TYPE_STYLE[t.type]}`}>{t.label}</span>)}</div>
+          <p className="text-muted"><strong className="text-ink">→</strong> vers une étape plus loin · <strong className="text-ink">↩</strong> retour en arrière (boucle). Touche une pastille pour y aller.</p>
+        </div>
+      </details>
+
+      <div className="space-y-4">
+        {data.chapters.map((c, ci) => {
+          const steps = data.steps.filter((s) => s.chapter_id === c.id)
+          const isOpen = open.has(c.id)
+          return (
+            <Card key={c.id} className="overflow-hidden">
+              <div id={`chapitre-${c.id}`} className="scroll-mt-20" />
+              <button type="button" aria-expanded={isOpen} onClick={() => setOpen(toggle(open, c.id))} className="flex min-h-touch w-full items-center gap-3 px-4 py-3 text-left">
+                <span className="flex size-9 shrink-0 items-center justify-center rounded-full bg-accent text-sm font-bold text-on-accent">{ci}</span>
+                <span className="min-w-0 flex-1">
+                  <span className="block font-semibold leading-snug">{c.titre.replace(/^Chapitre\s*\d+\s*·\s*/i, '')}</span>
+                  <span className="text-sm text-muted">{steps.length} étape{steps.length > 1 ? 's' : ''}</span>
+                </span>
+                <span className={`text-muted transition-transform ${isOpen ? 'rotate-90' : ''}`}><Icon name="chevron" size={18} /></span>
+              </button>
+              {isOpen && (
+                <div className="border-t border-line px-4 pb-4 pt-3">
+                  {c.objectif && <p className="mb-3 text-sm text-muted">{c.objectif}</p>}
+                  <ol className="relative ml-4 border-l-2 border-line">
+                    {steps.map((s, si) => {
+                      const here = order.get(s.id)!
+                      const expanded = details.has(s.id)
+                      const hasMore = !!(s.objectif || s.quoi_faire || s.config.cases?.length || s.config.points?.length)
+                      return (
+                        <li key={s.id} id={`step-${s.id}`} className={`relative scroll-mt-28 rounded-control py-2 pl-5 pr-2 transition-colors duration-500 ${flash === s.id ? 'bg-accent-soft' : ''}`}>
+                          <span className={`absolute -left-[0.6rem] top-4 flex size-5 items-center justify-center rounded-full border-2 border-surface text-[0.65rem] font-bold ${TYPE_STYLE[s.type]}`}>{si + 1}</span>
+                          <button type="button" disabled={!hasMore} aria-expanded={hasMore ? expanded : undefined} onClick={() => setDetails(toggle(details, s.id))} className="flex min-h-11 w-full flex-col items-start gap-1 text-left">
+                            <span className={`rounded-full px-2 py-0.5 text-[0.7rem] font-semibold ${TYPE_STYLE[s.type]}`}>{TYPE_LABEL[s.type]}</span>
+                            <span className="font-medium leading-snug">{stepLabel(s)}</span>
+                          </button>
+
+                          {expanded && (
+                            <div className="anim-fade mt-1 space-y-2 rounded-control bg-bg p-3 text-sm">
+                              {s.objectif && <p><strong>Objectif :</strong> {s.objectif}</p>}
+                              {s.quoi_faire && <p className="line-clamp-6 whitespace-pre-wrap text-muted">{s.quoi_faire.replace(/\[À COPIER\]\s*/gi, '📋 ')}</p>}
+                              {s.config.cases && <ul className="list-inside list-disc text-muted">{s.config.cases.map((x, i) => <li key={i}>{x}</li>)}</ul>}
+                              {s.config.points && <ul className="list-inside list-disc text-muted">{s.config.points.map((x, i) => <li key={i}>{x}</li>)}</ul>}
+                            </div>
+                          )}
+
+                          {s.type === 'choix' && (
+                            <ul className="mt-1 space-y-2">
+                              {(s.config.options ?? []).map((o, i) => (
+                                <li key={i} className="flex flex-wrap items-center gap-2 text-sm">
+                                  <span className="rounded-full bg-accent-soft px-2.5 py-1 font-semibold text-accent">{o.label}</span>
+                                  <Target from={here} to={o.goto ? byRef.get(o.goto) : undefined} />
+                                </li>
+                              ))}
+                            </ul>
+                          )}
+                          {s.type === 'verif' && s.config.si_non && (
+                            <p className="mt-1 text-sm text-muted"><strong className="text-ink">Si « Non » :</strong> <span className="line-clamp-2">{s.config.si_non}</span></p>
+                          )}
+                          {s.type !== 'choix' && s.config.apres && (
+                            <p className="mt-1 flex flex-wrap items-center gap-2 text-sm"><span className="text-muted">Après « Oui » :</span><Target from={here} to={byRef.get(s.config.apres)} /></p>
+                          )}
+                        </li>
+                      )
+                    })}
+                  </ol>
+                  {ci < data.chapters.length - 1 && <p className="mt-3 text-sm text-muted">↓ puis chapitre {ci + 1}</p>}
+                  {ci === data.chapters.length - 1 && <p className="mt-3 text-sm font-medium text-ok">✓ Guide terminé</p>}
+                </div>
+              )}
+            </Card>
+          )
+        })}
+      </div>
     </>
   )
 }

@@ -5,6 +5,7 @@ import { api, ApiError, POLL_MS } from '../api'
 import { ago, Button, Card, CopyButton, Field, Notice, Sheet } from '../ui'
 import { GuideDiagram, GuideEditor, GuidePreview } from './GuideEditor'
 import { HelpPage } from './HelpPage'
+import { InstallLink } from '../install/InstallPrompt'
 
 export interface StudentRow { id: number; prenom: string; note: string; created_at: string; archived: number; has_code: number }
 export interface AssignmentRow { id: number; student_id: number; guide_id: number; status: AssignmentStatus; started_at: string; updated_at: string; guide: string; step_titre: string | null; step_type: StepType | null; chapitre: string | null }
@@ -107,7 +108,8 @@ export default function AdminApp() {
             <Route path="/blocages/:id" element={<HelpPage />} />
             <Route path="*" element={<Dashboard />} />
           </Routes>
-          <footer className="mt-10 text-center">
+          <footer className="mt-10 flex items-center justify-center gap-5">
+            <InstallLink />
             <button type="button" onClick={logout} className="min-h-11 text-sm text-muted underline underline-offset-2">Se déconnecter</button>
           </footer>
         </div>

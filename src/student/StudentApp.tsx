@@ -3,6 +3,7 @@ import { applyAction, type StudentAction, type StudentHome, type TubeState } fro
 import { api, ApiError, POLL_MS } from '../api'
 import { Button, Card, Field, Notice } from '../ui'
 import { Tube } from './Tube'
+import { InstallLink } from '../install/InstallPrompt'
 
 const STATUS: Record<string, string> = { en_cours: 'En cours', en_pause: 'En pause', bloque: 'En attente de Gaby', termine: 'Terminé' }
 
@@ -103,6 +104,7 @@ export default function StudentApp() {
   const many = home.assignments.length > 1
   const quit = (
     <span className="flex items-center gap-4">
+      <InstallLink />
       <a href="/admin" className="inline-flex min-h-11 items-center text-sm text-muted underline underline-offset-2">Espace admin</a>
       <button type="button" onClick={logout} className="min-h-11 text-sm font-medium text-accent">Se déconnecter</button>
     </span>
@@ -186,7 +188,7 @@ function Login({ onDone }: { onDone: () => void }) {
         {error && <Notice tone="error">{error}</Notice>}
         <Button type="submit" className="w-full" disabled={busy || !prenom.trim() || code.trim().length < 6}>{busy ? 'Connexion…' : 'Entrer'}</Button>
       </form>
-      <p className="mt-8 text-center"><a href="/admin" className="inline-flex min-h-11 items-center text-sm text-muted underline underline-offset-2">Espace admin</a></p>
+      <p className="mt-8 flex items-center justify-center gap-5"><InstallLink /><a href="/admin" className="inline-flex min-h-11 items-center text-sm text-muted underline underline-offset-2">Espace admin</a></p>
     </Centered>
   )
 }

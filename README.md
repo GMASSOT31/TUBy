@@ -30,7 +30,7 @@ npm run dev                                            # http://localhost:8788
 
 `npm run dev` construit le site puis le sert avec `wrangler pages dev` (API et base D1 locales comprises). Pour travailler l'interface avec rechargement à chaud : garde `npm run dev` ouvert et lance `npm run dev:ui` dans un second terminal.
 
-Tests : `npm test` (règles du tube) et, serveur local lancé, `npm run test:e2e` (tous les critères d'acceptation dans un vrai navigateur).
+Tests : `npm test` (règles du tube et chemins du guide) et, serveur local lancé, `npm run test:e2e` (tous les critères d'acceptation dans un vrai navigateur) et `npm run test:install` (installation comme une appli).
 
 ## Appliquer une migration
 
@@ -70,6 +70,15 @@ Deux variables secrètes, posées avec `wrangler pages secret put <NOM> --projec
 - Codes élèves et jetons de session stockés hachés ; 5 erreurs de connexion → blocage 10 minutes.
 - Un élève ne lit et ne modifie que ses propres attributions ; sans session, toute route `/api/*` (hors connexion) répond 401.
 - Chaque appel d'API regroupe ses lectures (quelques requêtes D1, toujours moins de 50). L'écran d'attente de l'élève et le tableau de bord admin interrogent l'API toutes les 20 secondes.
+
+## Installer TUBy comme une appli
+
+- **Chrome, Edge, Samsung Internet (Android, Windows, Mac, ChromeOS)** : une invitation « Installer TUBy » apparaît 2,5 s après l'ouverture ; un clic sur « Installer » ouvre la fenêtre d'installation du navigateur.
+- **iPhone, iPad** : l'invitation affiche un tutoriel en 3 étapes (Partager → Sur l'écran d'accueil → Ajouter), adapté à l'emplacement du bouton Partager. Une fois installée, l'appli a ses propres cookies : il faut se reconnecter une fois.
+- **Safari sur Mac** : tutoriel « Fichier → Ajouter au Dock ».
+- **« Plus tard »** : plus d'invitation pendant 7 jours. **« Ne plus proposer »** : plus jamais. Le lien discret « Installer l'appli » (bas de l'écran de connexion, plan du guide, accueil, admin) reste disponible.
+- Déjà installée (ouverte depuis l'écran d'accueil ou le Dock) : rien n'est proposé. L'appli s'ouvre dans sa propre fenêtre, sans barre d'adresse.
+- Navigateurs sans installation possible (Firefox…) : rien n'est proposé.
 
 ## Écrire une étape
 

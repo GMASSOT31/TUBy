@@ -28,11 +28,17 @@ const call = async (path, { method = 'GET', body, cookie } = {}) => {
   log('sans session : 401 partout')
 
   const browser = await chromium.launch()
+  // L'invitation à installer est testée à part (tests/install.cjs) : ici, l'élève a choisi « Ne plus proposer ».
+  const newContext = async (options) => {
+    const c = await browser.newContext(options)
+    await c.addInitScript(() => { try { localStorage.setItem('tuby-install', JSON.stringify({ never: true })) } catch {} })
+    return c
+  }
   const shot = async (page, name) => SHOTS && page.screenshot({ path: `${SHOTS}/${name}.png` })
   const title = (page) => page.locator('main h1').first()
 
   // 1. L'admin se connecte, crée un élève, obtient un code.
-  const adminCtx = await browser.newContext({ ...devices['iPhone 14'] })
+  const adminCtx = await newContext({ ...devices['iPhone 14'] })
   const admin = await adminCtx.newPage()
   await admin.goto(BASE + '/admin')
   await admin.getByLabel('Mot de passe').fill('mauvais-mot-de-passe')
@@ -63,7 +69,7 @@ const call = async (path, { method = 'GET', body, cookie } = {}) => {
   log('guide attribué')
 
   // 2. l’élève se connecte et arrive sur la première étape.
-  let ctx = await browser.newContext({ ...devices['iPhone 14'] })
+  let ctx = await newContext({ ...devices['iPhone 14'] })
   let page = await ctx.newPage()
   await page.goto(BASE)
   await page.getByLabel('Ton prénom').fill(eleve.toLowerCase())
@@ -91,7 +97,7 @@ const call = async (path, { method = 'GET', body, cookie } = {}) => {
   await page.waitForTimeout(400)
   const storage = await ctx.storageState()
   await ctx.close()
-  ctx = await browser.newContext({ ...devices['iPhone 14'], storageState: storage })
+  ctx = await newContext({ ...devices['iPhone 14'], storageState: storage })
   page = await ctx.newPage()
   await page.goto(BASE)
   await page.getByRole('heading', { name: 'Compte GitHub' }).waitFor()
@@ -292,7 +298,7 @@ const call = async (path, { method = 'GET', body, cookie } = {}) => {
   log('admin : duplication, édition, réordonnancement, aperçu élève, suppression')
 
   // 10. Reste utilisable sur un écran d'ordinateur ; manifeste PWA présent.
-  const desk = await browser.newContext({ viewport: { width: 1440, height: 900 }, storageState: await ctx.storageState() })
+  const desk = await newContext({ viewport: { width: 1440, height: 900 }, storageState: await ctx.storageState() })
   const dp = await desk.newPage()
   await dp.goto(BASE)
   await dp.getByRole('heading', { name: 'Avant de commencer' }).waitFor()
